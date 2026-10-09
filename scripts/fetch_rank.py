@@ -1045,6 +1045,27 @@ def main(argv: Optional[List[str]] = None) -> int:
         # 标签必须在补全之后计算, 才能用到 API 回传的描述与 topics
         apply_tags(items)
 
+        # ---- 不退化闸门 ----
+        # Trending 页只有 9~25 条, 而 data/<period>.json 与 data/pages/<period>/
+        # 由 fetch_top100.py 维护「前 100 名」。fetch_top100.py 平时**只重建日榜**
+        # (周榜仅周一、月榜仅 1 号), 所以这里一旦无条件覆盖, 每天的定时任务都会把
+        # 周榜/月榜砸成 Trending 的薄数据 —— 实测首个 cron 跑出 周榜 100→11、
+        # 月榜 100→24, 与前端的 6 条/页 × 17 页结构矛盾(README「每个榜单稳定展示前 100 名」)。
+        # 已有榜单更完整时直接跳过覆盖, 保留 fetch_top100.py 的产物。
+        prev_items: List[Dict[str, Any]] = (
+            previous_board.get("items") if isinstance(previous_board, dict) else None
+        ) or []
+        if len(prev_items) > len(items):
+            log(
+                "{0} 本次只抓到 {1} 条, 少于已有的 {2} 条, 跳过覆盖以保持产物不退化".format(
+                    period, len(items), len(prev_items)
+                ),
+                "WARN",
+            )
+            boards[period] = previous_board
+            counts[period] = len(prev_items)
+            continue
+
         board: Dict[str, Any] = build_board(period, items, updated_at)
         write_json(output_path, board)
         write_period_pages(period, board, updated_at)
