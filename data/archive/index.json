@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-09T16:26:31+08:00",
+  "generatedAt": "2026-10-09T17:58:38+08:00",
   "types": {
     "daily": {
       "periodLabel": "近 24 小时飙升榜",
@@ -13,10 +13,10 @@
           "file": "data/daily/2026-10-09.json",
           "date": "2026-10-09",
           "count": 100,
-          "rangeStart": "2026-10-08T08:26:31Z",
-          "rangeEnd": "2026-10-09T08:26:31Z",
-          "updatedAt": "2026-10-09T16:26:31+08:00",
-          "revisions": 4
+          "rangeStart": "2026-10-08T09:58:38Z",
+          "rangeEnd": "2026-10-09T09:58:38Z",
+          "updatedAt": "2026-10-09T17:58:38+08:00",
+          "revisions": 5
         },
         {
           "name": "2026-10-08",
