@@ -1,0 +1,23 @@
+{
+  "period": "daily",
+  "periodLabel": "近 24 小时飙升榜",
+  "updatedAt": "2026-10-09T13:00:14+08:00",
+  "pageSize": 6,
+  "totalPages": 17,
+  "total": 100,
+  "tagCounts": {
+    "ai": 35,
+    "agent": 32,
+    "llm": 15,
+    "devtool": 14,
+    "media": 14,
+    "web": 9,
+    "cli": 7,
+    "mobile": 7,
+    "devops": 5,
+    "data": 4,
+    "docs": 4,
+    "security": 4,
+    "game": 2
+  }
+}

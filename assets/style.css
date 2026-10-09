@@ -1,0 +1,1216 @@
+/* ==========================================================================
+ * GitHub 开源项目榜单 · 样式（A 方案「编辑风 Editorial」+ 明暗双主题）
+ *
+ *  设计基调：把"卡片列表"换成一版排版式表格 —— 无圆角、无阴影、无白面填充，
+ *  只用发丝线与字重/字色组织信息；强调色只有墨黑，唯一的彩色是周期增幅的红。
+ *  深色主题取自 C 方案（GitHub 暗色调色板 #0d1117 / #161b22）。
+ *
+ *  两条被用户量过的回归必须守死：
+ *   1) html { scrollbar-gutter: stable } —— 否则内容高度一变滚动条消失/重现，
+ *      居中内容横移 7.5px（"切榜会抖"的横向来源）。
+ *   2) .tags 的高度不得依赖内容 —— 切到一个还没拉过 index 的榜单时标签栏是空的，
+ *      必须靠 min-height 预留固定一行，否则头部塌 32px、列表整体跳动。
+ * ========================================================================== */
+
+/* --------------------------------------------------------------------------
+ * 1. 设计令牌：两套颜色，变量名一一对应
+ * ------------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light;
+
+  /* 浅色：A 方案 */
+  --canvas: #ffffff;        /* 画布 */
+  --surface: #ffffff;       /* 面（本设计无卡片底，与画布同色） */
+  --rule: #e5e5e5;          /* 发丝线 */
+  --rule-dotted: #cfcfcf;   /* 抽屉点线引导符 */
+  --rule-strong: #111111;   /* 报头粗线 / 小节粗线 */
+  --text-strong: #111111;   /* 正文强调 = 墨黑 */
+  --text: #3d3d3d;          /* 正文 */
+  --muted: #8a8a8a;         /* 次要文字 */
+  --faint: #c4c4c4;         /* 名次数字 / 分隔符 */
+  --faint-rank: #949494;   /* 名次数字专用：26px 大字，对比度需 >=3:1 */
+  --accent: #111111;        /* 唯一强调色 = 墨黑 */
+  --growth: #b3261e;        /* 周期增幅（红，两主题都是红） */
+  --growth-muted: #a3a3a3;  /* 增幅待考 */
+  --status: #1a7f37;        /* 更新状态点 */
+  --link: #111111;          /* 真链接（浅色下靠下划线区分） */
+  --focus: #111111;         /* 焦点环 */
+  --drawer-edge: #e5e5e5;   /* 抽屉左边框 */
+  --mask: rgba(17, 17, 17, .28);
+  --skeleton-a: #f7f7f7;
+  --skeleton-b: #ededed;
+
+  /* 字体：全部系统字体，不引外部字体 */
+  --font-serif: Georgia, "Songti SC", "Noto Serif SC", "Source Han Serif SC", serif;
+  --font-sans: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* 尺度 */
+  --page-max: 1180px;
+  --page-pad: 40px;
+  --rank-gutter: 64px;
+  --chip-h: 20px;           /* 标签栏一行的固定高度（见约束 2） */
+  --hchip-h: 26px;          /* 历史芯片高度：比标签 chip 高，因为它需要"可点"的形状（见约束 6） */
+  --drawer-w: 440px;
+}
+
+/* 深色：C 方案的 GitHub-dark 调色板。
+   「涨幅要红」——数字换成 #f85149 依旧是红，翻主题时不改色相。
+   #58a6ff 只用于真链接（主页链接、.repo-link:hover）与焦点环，其余一律单色。 */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #0d1117;
+  --surface: #161b22;
+  --rule: #21262d;
+  --rule-dotted: #30363d;
+  --rule-strong: #30363d;
+  --text-strong: #e6edf3;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+  --faint: #484f58;
+  --faint-rank: #6e7681;   /* 名次数字专用：26px 大字，对比度需 >=3:1 */
+  --accent: #e6edf3;
+  --growth: #f85149;
+  --growth-muted: #6e7681;
+  --status: #3fb950;
+  --link: #58a6ff;
+  --focus: #58a6ff;
+  --drawer-edge: #30363d;
+  --mask: rgba(1, 4, 9, .6);
+  --skeleton-a: #161b22;
+  --skeleton-b: #1c2128;
+}
+
+/* --------------------------------------------------------------------------
+ * 2. 基础
+ * ------------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* 约束 1：恒定预留滚动条槽位，杜绝"内容变矮 → 滚动条消失 → 整页横移" */
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* 抽屉打开时锁滚动。JS 会同时补 padding-right 抵消宽度变化。
+   注意：这个类名只加在 <body> 上，绝不能拿去做按钮样式。 */
+body.drawer-open { overflow: hidden; }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+ * 3. 版心
+ * ------------------------------------------------------------------------ */
+
+.page {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 var(--page-pad);
+  transition: padding-right .18s ease;
+}
+
+/* 抽屉贴着右侧浮层，宽屏下把版心右内边距撑开给它让位，正文不会被盖住。
+   < 1120px 时改回普通内边距，抽屉当作蒙层使用。 */
+body.drawer-open .page { padding-right: calc(var(--drawer-w) + 32px); }
+
+.main { display: block; }
+
+/* --------------------------------------------------------------------------
+ * 4. 报头
+ * ------------------------------------------------------------------------ */
+
+.site-header {
+  padding-top: 34px;
+  /* 整块头部之下压一条粗线，收住报头 */
+  border-bottom: 2px solid var(--rule-strong);
+}
+
+.head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  /* 报头与筛选区之间的发丝线 */
+  border-bottom: 1px solid var(--rule);
+}
+
+.brand { min-width: 0; }
+
+.brand-title {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 34px;
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  color: var(--text-strong);
+}
+
+.brand-sub {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  letter-spacing: .02em;
+  color: var(--muted);
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  padding-top: 6px;
+}
+
+/* 更新时间：小字 + 5px 状态点，不是胶囊 */
+.update-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  letter-spacing: .02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.update-badge .dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--status);
+}
+
+/* --------------------------------------------------------------------------
+ * 5. 主题开关 / 语言开关（同一档克制语气）
+ * ------------------------------------------------------------------------ */
+
+/* 浅色显示月亮（点击进深色），深色显示太阳。两枚图标互斥，永远只露一个。 */
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s;
+}
+
+.theme-btn:hover { color: var(--text-strong); }
+.theme-btn svg { display: block; }
+.theme-btn .ico-sun { display: none; }
+html[data-theme="dark"] .theme-btn .ico-moon { display: none; }
+html[data-theme="dark"] .theme-btn .ico-sun { display: block; }
+
+/* 语言开关：裸文字，低对比；hover 转墨色，选中项墨色、另一项浅灰 */
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 12.5px;
+  letter-spacing: .06em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s;
+}
+
+.lang-switch:hover,
+.lang-switch:hover [data-lang] { color: var(--text-strong); }
+
+.lang-switch [data-lang] {
+  color: var(--faint);
+  transition: color .15s;
+}
+
+.lang-switch [data-lang].is-on {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.lang-sep { color: var(--faint); opacity: .7; }
+
+/* --------------------------------------------------------------------------
+ * 6. 榜期 Tab（文字 + 2px 墨色下划线，非分段控件）
+ * ------------------------------------------------------------------------ */
+
+.tabs {
+  display: flex;
+  align-items: baseline;
+  gap: 26px;
+  padding: 18px 0 0;
+}
+
+.tab {
+  padding: 0 0 6px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: .02em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.tab:hover { color: var(--text-strong); }
+
+.tab.is-active {
+  color: var(--text-strong);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+ * 7. 标签筛选栏
+ *
+ * 约束 2：高度必须与内容无关。切到尚未加载 index 的榜单时这里 innerHTML=''，
+ * 所以用 min-height 钉死"一行 chip + 上下内边距"：
+ *     min-height = --chip-h (20) + 12 + 16 = 48px
+ * 同时 .chip 给固定 height，保证有 chip 时一行也正好 48px，两边完全相等。
+ * ------------------------------------------------------------------------ */
+
+.tags {
+  display: flex;
+  /* 永远单行：一旦允许换行，chip 多寡就会改变标签栏高度，切到未加载的榜单
+     时清空标签栏仍会跳动。这里统一单行 + 横向滚动，高度与内容彻底无关。 */
+  flex-wrap: nowrap;
+  align-items: center;
+  column-gap: 18px;
+  padding: 12px 0 16px;
+  min-height: calc(var(--chip-h) + 28px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tags::-webkit-scrollbar { display: none; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--chip-h);
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: .01em;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s;
+}
+
+.chip:hover { color: var(--text-strong); }
+
+.chip .chip-num {
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.is-on {
+  color: var(--text-strong);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.chip.is-on .chip-num { color: var(--muted); }
+
+/* --------------------------------------------------------------------------
+ * 7b. 历史归档栏
+ *
+ * 设计目标：**入口要一眼可点**。第一版的失败在于"裸文字 + 发丝竖线"——
+ * 那是面包屑的视觉语言，和可点控件没有任何共性，用户根本不知道这里能点。
+ * 现在改成与其他控件同族的"描边胶囊 + 选中反色"，并把最想看的语义
+ * （昨日 / 上周 / 上月）提到主体、日期降为副。
+ *
+ * 约束 6：高度必须与内容无关。三种状态必须完全等高 ——
+ *   ① 首屏索引还没回来 / 该周期一份归档都没有（只显示标签 + 一行说明）
+ *   ② 有 1 枚芯片
+ *   ③ 有几十期（单行横向滚动）
+ * 所以钉死 min-height = 上内边距(4) + --hchip-h(26) + 下内边距(14) = 44px，
+ * 且 flex-wrap: nowrap。任何一项改动都要回头核对这三态是否还等高。
+ * ------------------------------------------------------------------------ */
+
+.history-wrap { position: relative; }
+
+.history-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  column-gap: 8px;
+  padding: 4px 0 14px;
+  /* 4(上) + --hchip-h(26) + 14(下) = 44px，三态恒等 */
+  min-height: calc(var(--hchip-h) + 18px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.history-bar::-webkit-scrollbar { display: none; }
+
+/* 入口标签：加粗 + 时钟图标，与后面的胶囊拉开层级 ——
+   它说明"这一行是什么"，本身不是可点控件，所以不带描边。 */
+.history-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding-right: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--text-strong);
+}
+
+.history-label svg { flex-shrink: 0; }
+
+/* .history-pending：判据（实时榜 updatedAt）还没到时的占位，语义上不是"没有历史"，
+   所以单独一个类名 —— 空态断言靠 .history-empty，别让占位把它污染了。外观同 .history-empty。 */
+.history-empty,
+.history-pending {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* 日期芯片 / 「全部」按钮：描边胶囊，与标签栏的 chip 同族但形状更明确。
+   两者共用一套外观，但**类名分开** —— `.hchip` 的语义是"某一期"，
+   「全部」不是一期而是出口，混在一起会让"这一行有几期"这种判断失真。 */
+.hchip,
+.hall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: var(--hchip-h);
+  padding: 0 12px;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background-color .15s;
+}
+
+.hchip:hover,
+.hall:hover { color: var(--text-strong); border-color: var(--rule-dotted); }
+
+.hchip:focus-visible,
+.hall:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* 语义标签是主体（昨日 / 上周 / 上月），日期是副 —— 反过来就等于把
+   用户最想看的那几个字做成了最弱的字。 */
+.hchip-ago {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hchip-date {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 选中态用**反色填充**而不是只加粗：只加粗根本看不出来"我已经不在最新了" */
+.hchip.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.hchip.is-on,
+.hchip.is-on .hchip-ago,
+.hchip.is-on .hchip-date { color: var(--canvas); }
+
+.hchip.is-on .hchip-date { opacity: .72; }
+.hchip.is-on:hover { border-color: var(--accent); }
+
+/* 「全部 N 期」：轻底色，与日期芯片区分，是"还有更多"的出口 */
+.hall {
+  background: var(--skeleton-a);
+  color: var(--text);
+}
+
+.hall[aria-expanded="true"] { border-color: var(--rule-dotted); }
+
+.hchip-caret { flex-shrink: 0; opacity: .75; }
+
+/* 全部归档面板：绝对定位，**不参与布局**（否则展开就会改变这一行的高度，
+   破坏上面那条"高度与内容无关"的约束）。z-index 必须低于抽屉的 40/41。 */
+.history-pop {
+  position: absolute;
+  top: calc(100% - 6px);
+  left: 0;
+  z-index: 30;
+  width: min(420px, 100%);
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 12px 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
+}
+
+/* 作者样式里的 display 会盖掉 UA 的 [hidden]，必须显式写一条 */
+.history-pop[hidden] { display: none; }
+
+.hpop-title,
+.hpop-group { padding: 0 8px; }
+
+.hpop-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.hpop-group {
+  margin: 12px 0 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hpop-group:first-of-type { margin-top: 4px; }
+
+.hpop-list { display: flex; flex-direction: column; }
+
+.hrow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color .12s;
+}
+
+.hrow:hover { background: var(--skeleton-a); }
+.hrow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.hrow.is-on { background: var(--skeleton-b); }
+
+.hrow-ago {
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hrow-date {
+  flex: 1 1 auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 重抓留底：这一天被同一天重跑覆盖过几次（revisions > 0 才出现）。
+   弱化处理 —— 它是"数据没丢"的凭据，不是主信息，别抢日期的戏。 */
+.hrow-rev {
+  flex: 0 0 auto;
+  font-size: 11px;
+  letter-spacing: .02em;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.hrow-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* 查看历史快照时，给「数据更新于」加一个可辨识的标记 */
+.update-badge.is-snapshot .dot { background: var(--muted); }
+
+/* --------------------------------------------------------------------------
+ * 8. 列表：排版式表格（无圆角 / 无阴影 / 无填充，只靠发丝线分区）
+ * ------------------------------------------------------------------------ */
+
+.board { display: block; }
+
+.card {
+  display: grid;
+  grid-template-columns: var(--rank-gutter) 1fr;
+  column-gap: 8px;
+  align-items: start;
+  padding: 26px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.card-body { min-width: 0; }
+
+/* 名次列：等宽 + 表格数字，个位数由 JS 补零（01…09 / 10） */
+.card-rank {
+  padding-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint-rank);
+  user-select: none;
+}
+
+/* 前三名用墨色，是编辑风的一点点强调（比原稿更耐看） */
+.card-rank.top1,
+.card-rank.top2,
+.card-rank.top3 { color: var(--text-strong); }
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -.012em;
+  line-height: 1.2;
+  color: var(--text-strong);
+}
+
+.repo-avatar {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  object-fit: cover;
+  background: var(--rule);
+  border: 1px solid var(--rule-strong);
+}
+
+.repo-link {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-link:hover { color: var(--link); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.repo-owner { color: var(--muted); font-weight: 500; }
+.repo-slash { color: var(--faint); margin: 0 1px; }
+
+/* 周期增幅：纯彩色文字（不是胶囊），推到标题行最右 */
+.hot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .005em;
+  color: var(--growth);
+  white-space: nowrap;
+}
+
+.hot-badge svg { flex: 0 0 auto; }
+.hot-badge.is-unknown { color: var(--growth-muted); }
+
+.card-desc {
+  max-width: 66ch;
+  margin: 0 0 9px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-desc.is-empty { color: var(--muted); font-style: italic; }
+
+/* 标签：裸文字，连续标签之间用 " · " 分隔（不是胶囊） */
+.card-tags { margin: 0 0 12px; font-size: 13px; letter-spacing: .01em; }
+
+.tag { color: inherit; }
+.card-tags .tag { color: var(--muted); }
+
+.card-tags .tag + .tag::before,
+.drawer-tags .tag + .tag::before {
+  content: "·";
+  margin: 0 7px;
+  color: var(--faint);
+}
+
+.card-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  font-size: 12.5px;
+  letter-spacing: .01em;
+  color: var(--muted);
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* 相邻 meta 之间补一个浅色 " · "，替代原稿里手工写的分隔 span */
+.meta-item + .meta-item::before {
+  content: "·";
+  margin-right: 8px;
+  color: var(--faint);
+}
+
+.meta-item svg { flex: 0 0 auto; opacity: .55; }
+.meta-strong { color: var(--text-strong); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.lang-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  transform: translateY(1px);
+}
+
+/* 深色画布上，C(#555555) / Lua(#000080) 这类深色色块会"消失"，补一圈发丝描边 */
+html[data-theme="dark"] .lang-dot {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+
+/* 详情按钮：裸文字 + 1px 下边框，不是胶囊 */
+.detail-btn {
+  margin-left: auto;
+  padding: 0 0 1px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  font: inherit;
+  font-size: 12.5px;
+  letter-spacing: .04em;
+  color: var(--text-strong);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.detail-btn:hover { color: var(--growth); border-bottom-color: var(--growth); }
+
+/* --------------------------------------------------------------------------
+ * 9. 收尾 / 状态 / 骨架
+ * ------------------------------------------------------------------------ */
+
+.feed-foot { padding: 0; }
+.sentinel { height: 1px; }
+
+.feed-end {
+  margin: 0;
+  padding: 34px 0 30px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  letter-spacing: .03em;
+  color: var(--muted);
+  text-align: center;
+}
+
+.skeletons {
+  display: grid;
+  gap: 12px;
+  padding: 20px 0;
+}
+
+/* 作者样式的 display 会盖掉 UA 的 [hidden]{display:none}，必须显式声明（约束 3） */
+.skeletons[hidden] { display: none; }
+
+.skeleton {
+  height: 96px;
+  border-radius: 0;
+  background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 37%, var(--skeleton-a) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.3s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.state {
+  padding: 56px 0;
+  text-align: center;
+}
+
+.state-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--text-strong);
+}
+
+.state-desc {
+  margin: 10px auto 0;
+  max-width: 54ch;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.state.is-error .state-title { color: var(--growth); }
+
+.state code {
+  padding: 1px 5px;
+  border: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: .92em;
+  color: var(--text-strong);
+}
+
+/* --------------------------------------------------------------------------
+ * 10. 页脚
+ * ------------------------------------------------------------------------ */
+
+.site-footer {
+  margin-top: 12px;
+  padding: 22px 0 48px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  line-height: 1.9;
+  letter-spacing: .01em;
+  color: var(--muted);
+}
+
+.site-footer p { margin: 0; }
+.site-footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.site-footer a:hover { color: var(--text-strong); }
+.footer-sub { margin-top: 4px; }
+
+/* --------------------------------------------------------------------------
+ * 11. 详情抽屉
+ * ------------------------------------------------------------------------ */
+
+.drawer-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--mask);
+  animation: mask-in .18s ease;
+}
+
+.drawer-mask[hidden] { display: none; }
+
+@keyframes mask-in { from { opacity: 0; } to { opacity: 1; } }
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  width: var(--drawer-w);
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--drawer-edge);
+  /* 编辑风：不靠重阴影，靠 1px 边框与留白分隔 */
+  box-shadow: none;
+  animation: drawer-in .2s cubic-bezier(.22, .61, .36, 1);
+}
+
+.drawer[hidden] { display: none; }
+
+@keyframes drawer-in {
+  from { transform: translateX(20px); opacity: .5; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.drawer-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+  color: var(--text-strong);
+  word-break: break-word;
+}
+
+.drawer-title .repo-owner { color: var(--muted); font-weight: 400; }
+.drawer-title .repo-slash { color: var(--faint); }
+
+/* 抽屉内的小号开关：与 .drawer-lang 同一档尺寸，比头部那个更收敛 */
+.drawer-lang,
+.drawer-theme { flex-shrink: 0; font-size: 12px; }
+
+.drawer-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s;
+}
+
+.drawer-close:hover { color: var(--text-strong); }
+
+.drawer-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 22px 22px 40px;
+}
+
+/* --- 抽屉 · 顶部信息条 --- */
+
+.drawer-hero {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.drawer-avatar {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  background: var(--rule);
+  border: 1px solid var(--rule-strong);
+}
+
+.drawer-avatar.is-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-strong);
+}
+
+.drawer-hero-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* 状态标记：裸文字（归档加粗、Fork 弱化），不做胶囊 */
+.drawer-flag {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+
+.drawer-flag.is-soft { color: var(--muted); font-weight: 400; }
+
+/* --- 抽屉 · 指标（两列，标签靠点线引导到右对齐的数值） --- */
+
+.drawer-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 32px;
+  margin-bottom: 28px;
+}
+
+.drawer-stat {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+
+.drawer-stat-lb {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  color: var(--muted);
+}
+
+/* 与 .drawer-row dt::after 同一套点线，只是方向相反 */
+.drawer-stat-lb::after {
+  content: "";
+  flex: 1 1 8px;
+  align-self: center;
+  border-bottom: 1px dotted var(--rule-dotted);
+  margin: 0 10px;
+}
+
+.drawer-stat-num {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.drawer-stat.is-accent .drawer-stat-num { color: var(--growth); }
+
+/* --- 抽屉 · 分节 --- */
+
+.drawer-section + .drawer-section { margin-top: 28px; }
+
+.drawer-label {
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+
+.drawer-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.drawer-desc.is-empty { color: var(--muted); font-style: italic; }
+
+.drawer-tags { font-size: 14px; letter-spacing: .02em; color: var(--text); }
+.drawer-tags .tag { color: var(--text); }
+
+/* --- 抽屉 · 项目信息（dt ······ dd，纯 CSS 点线，不改标记） --- */
+
+.drawer-list { margin: 0; }
+
+.drawer-row {
+  display: flex;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+
+.drawer-row dt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  color: var(--muted);
+}
+
+.drawer-row dt::after {
+  content: "";
+  flex: 1 1 8px;
+  align-self: center;
+  border-bottom: 1px dotted var(--rule-dotted);
+  margin: 0 10px;
+}
+
+.drawer-row dd {
+  flex: 0 1 auto;
+  margin: 0;
+  text-align: right;
+  color: var(--text-strong);
+  overflow-wrap: break-word;
+}
+
+.drawer-row dd.is-unknown { color: var(--muted); }
+
+.drawer-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  overflow-wrap: break-word;
+}
+
+.drawer-code {
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-strong);
+}
+
+/* 末节（跳转 GitHub）：上方一条墨线收尾，按钮用「反白」hover */
+.drawer-section:last-child {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.drawer-cta {
+  display: inline-block;
+  padding: 11px 20px;
+  background: none;
+  border: 1px solid var(--rule-strong);
+  font-size: 13.5px;
+  letter-spacing: .03em;
+  color: var(--text-strong);
+  transition: background .15s, color .15s;
+}
+
+.drawer-cta:hover {
+  background: var(--text-strong);
+  color: var(--canvas);
+}
+
+/* --------------------------------------------------------------------------
+ * 12. 响应式
+ * ------------------------------------------------------------------------ */
+
+/* 不够宽就不要再给抽屉让位，直接当蒙层用 */
+@media (max-width: 1119px) {
+  body.drawer-open .page { padding-right: var(--page-pad); }
+}
+
+@media (max-width: 820px) {
+  :root { --page-pad: 26px; }
+  .brand-title { font-size: 29px; }
+}
+
+@media (max-width: 620px) {
+  :root { --page-pad: 18px; }
+
+  .brand-title { font-size: 26px; }
+
+  .head-row {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .head-actions {
+    align-self: flex-start;
+    flex-wrap: wrap;
+    padding-top: 0;
+  }
+
+  .tabs { gap: 20px; }
+
+  .card {
+    grid-template-columns: 40px 1fr;
+    column-gap: 12px;
+    padding: 22px 0;
+  }
+
+  .card-rank { font-size: 21px; }
+  .card-title { font-size: 17px; flex-wrap: wrap; }
+  .hot-badge { margin-left: 0; }
+  .card-desc { font-size: 14px; -webkit-line-clamp: 3; }
+
+  .drawer {
+    width: 100%;
+    border-left: 0;
+  }
+
+  .drawer-head { padding: 16px 16px 12px; }
+  .drawer-body { padding: 18px 16px 32px; }
+  .drawer-stats { grid-template-columns: 1fr; }
+
+  .state-desc { max-width: none; }
+}
+
+/* --------------------------------------------------------------------------
+ * 13. 降低动态效果
+ * ------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .drawer,
+  .drawer-mask { animation: none; }
+  .page { transition: none; }
+  .drawer-cta,
+  .drawer-cta:hover,
+  .detail-btn { transition: none; }
+}

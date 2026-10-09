@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-10-09T13:00:14+08:00",
+  "types": {
+    "daily": {
+      "periodLabel": "近 24 小时飙升榜",
+      "dir": "data/daily",
+      "count": 2,
+      "latest": "2026-10-09",
+      "oldest": "2026-10-08",
+      "files": [
+        {
+          "name": "2026-10-09",
+          "file": "data/daily/2026-10-09.json",
+          "date": "2026-10-09",
+          "count": 100,
+          "rangeStart": "2026-10-08T05:00:14Z",
+          "rangeEnd": "2026-10-09T05:00:14Z",
+          "updatedAt": "2026-10-09T13:00:14+08:00",
+          "revisions": 0
+        },
+        {
+          "name": "2026-10-08",
+          "file": "data/daily/2026-10-08.json",
+          "date": "2026-10-08",
+          "count": 100,
+          "rangeStart": "2026-10-07T00:30:00Z",
+          "rangeEnd": "2026-10-08T00:30:00Z",
+          "updatedAt": "2026-10-09T11:13:32+08:00",
+          "revisions": 0
+        }
+      ]
+    },
+    "weekly": {
+      "periodLabel": "上周飙升榜",
+      "dir": "data/weekly",
+      "count": 1,
+      "latest": "2026-10-08",
+      "oldest": "2026-10-08",
+      "files": [
+        {
+          "name": "2026-10-08",
+          "file": "data/weekly/2026-10-08.json",
+          "date": "2026-10-08",
+          "count": 100,
+          "rangeStart": "2026-10-01T00:00:00Z",
+          "rangeEnd": "2026-10-07T23:59:59Z",
+          "updatedAt": "2026-10-09T11:13:32+08:00",
+          "revisions": 0
+        }
+      ]
+    },
+    "monthly": {
+      "periodLabel": "上月飙升榜",
+      "dir": "data/monthly",
+      "count": 1,
+      "latest": "2026-09",
+      "oldest": "2026-09",
+      "files": [
+        {
+          "name": "2026-09",
+          "file": "data/monthly/2026-09.json",
+          "date": "2026-09",
+          "count": 100,
+          "rangeStart": "2026-09-01T00:00:00Z",
+          "rangeEnd": "2026-09-30T23:59:59Z",
+          "updatedAt": "2026-10-09T11:13:32+08:00",
+          "revisions": 0
+        }
+      ]
+    }
+  },
+  "snapshots": {
+    "dir": "data/snapshots",
+    "count": 2,
+    "latest": "2026-10-09",
+    "keep": 40,
+    "files": [
+      "2026-10-08",
+      "2026-10-09"
+    ]
+  }
+}

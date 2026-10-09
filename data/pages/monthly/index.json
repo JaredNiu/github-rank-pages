@@ -1,0 +1,22 @@
+{
+  "period": "monthly",
+  "periodLabel": "上月飙升榜",
+  "updatedAt": "2026-10-09T11:13:32+08:00",
+  "pageSize": 6,
+  "totalPages": 17,
+  "total": 100,
+  "tagCounts": {
+    "ai": 35,
+    "agent": 27,
+    "media": 18,
+    "mobile": 15,
+    "devtool": 10,
+    "llm": 10,
+    "cli": 9,
+    "web": 7,
+    "data": 4,
+    "docs": 3,
+    "game": 2,
+    "security": 1
+  }
+}

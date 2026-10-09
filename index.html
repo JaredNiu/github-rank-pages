@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="GitHub 开源项目榜单：今日日榜 / 本周周榜 / 本月月榜，数据来自 GitHub Trending。" />
+  <meta name="theme-color" id="themeColorMeta" content="#ffffff" />
+  <title>GitHub 开源项目榜单 · 日榜 / 周榜 / 月榜</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='14'%3E%E2%AD%90%3C/text%3E%3C/svg%3E" />
+  <!-- 主题必须在样式表之前定好，否则深色模式刷新时会先闪一下白底 -->
+  <script>
+    (function () {
+      var theme = 'light';
+      try {
+        var saved = localStorage.getItem('github-rank-theme');
+        var preferDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        theme = (saved === 'dark' || saved === 'light') ? saved : (preferDark ? 'dark' : 'light');
+      } catch (e) { /* 隐私模式忽略 */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <div class="head-row">
+        <div class="brand">
+          <h1 class="brand-title" id="brandTitle">GitHub 开源项目榜单</h1>
+          <p class="brand-sub" id="brandSub">发现今日 / 本周 / 本月最值得关注的开源项目</p>
+        </div>
+        <div class="head-actions">
+          <span class="update-badge" id="updateBadge">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="updateTime">—</span>
+          </span>
+<button class="theme-btn" type="button" data-theme-toggle aria-label="切换深浅色">
+            <svg class="ico-moon" viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6.5 6.5 0 1 0 7.7 7.7Z"/></svg>
+            <svg class="ico-sun" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3.1"/><path d="M8 1.1v1.7M8 13.2v1.7M1.1 8h1.7M13.2 8h1.7M3.1 3.1l1.2 1.2M11.7 11.7l1.2 1.2M12.9 3.1l-1.2 1.2M4.3 11.7l-1.2 1.2"/></svg>
+          </button>
+          <button class="lang-switch" type="button" id="langSwitch" aria-label="切换界面语言">
+            <span data-lang="zh">中</span><span class="lang-sep">/</span><span data-lang="en">EN</span>
+          </button>
+        </div>
+      </div>
+
+      <nav class="tabs" id="tabs" role="tablist" aria-label="榜单周期切换">
+        <button class="tab is-active" type="button" role="tab" data-period="daily" aria-selected="true">日榜</button>
+        <button class="tab" type="button" role="tab" data-period="weekly" aria-selected="false">周榜</button>
+        <button class="tab" type="button" role="tab" data-period="monthly" aria-selected="false">月榜</button>
+      </nav>
+
+      <!-- 历史归档：每次抓取的结果都留档，这里按「周期 + 日期」翻看往日榜单。
+           与标签栏同理，这一行的高度由 CSS 钉死，与内容多少无关。
+           外面套一层 .history-wrap 是为了让「全部归档」面板能绝对定位 ——
+           .history-bar 自己有 overflow-x: auto，绝对定位的子节点会被它裁掉。 -->
+      <div class="history-wrap">
+        <div class="history-bar" id="historyBar" role="group" aria-label="历史快照"></div>
+        <div class="history-pop" id="historyPop" role="dialog" aria-label="全部归档" hidden></div>
+      </div>
+
+      <div class="tags" id="tagBar" aria-label="标签筛选"></div>
+    </header>
+
+    <main class="main">
+      <section id="board" class="board" aria-live="polite"></section>
+
+      <div class="feed-foot">
+        <div class="skeletons" id="skeletons" hidden>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+        <div class="sentinel" id="sentinel" aria-hidden="true"></div>
+        <p class="feed-end" id="feedEnd" hidden></p>
+      </div>
+
+      <footer class="site-footer">
+        <p id="footerSource"></p>
+        <p class="footer-sub" id="footerNote"></p>
+      </footer>
+    </main>
+  </div>
+
+  <div class="drawer-mask" id="drawerMask" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden>
+    <div class="drawer-head">
+      <h2 class="drawer-title" id="drawerTitle"></h2>
+<button class="theme-btn drawer-theme" type="button" data-theme-toggle aria-label="切换深浅色">
+          <svg class="ico-moon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6.5 6.5 0 1 0 7.7 7.7Z"/></svg>
+          <svg class="ico-sun" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3.1"/><path d="M8 1.1v1.7M8 13.2v1.7M1.1 8h1.7M13.2 8h1.7M3.1 3.1l1.2 1.2M11.7 11.7l1.2 1.2M12.9 3.1l-1.2 1.2M4.3 11.7l-1.2 1.2"/></svg>
+        </button>
+      <button class="lang-switch drawer-lang" type="button" id="drawerLang" aria-label="切换界面语言">
+        <span data-lang="zh">中</span><span class="lang-sep">/</span><span data-lang="en">EN</span>
+      </button>
+      <button class="drawer-close" id="drawerClose" type="button" aria-label="关闭">&#10005;</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

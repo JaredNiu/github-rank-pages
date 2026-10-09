@@ -1,0 +1,75 @@
+name: update-rank
+
+# 定时抓取榜单数据，并把结果提交回仓库 data/ 目录
+# cron 使用 UTC 时间：00:30 UTC == 北京时间 08:30
+#
+# 两个脚本分工：
+#   * fetch_rank.py   —— 抓 GitHub Trending 页面（9~25 条），保持原有产物不退化；
+#   * fetch_top100.py —— 用 Search API + 快照做差产出「前 100 名」，覆盖最新榜单与分页产物。
+# fetch_top100.py 会按运行日期自行判断本次该产出哪些榜
+# （日榜每天都产；周榜只在周一；月榜只在 1 号），因此这里**只需要一条每日 cron**。
+# 不要为周一 / 每月 1 号再加单独的 cron：同一天两条 cron 会同时命中，
+# 起两次 run、白耗 Search API 配额，还会多一次空提交风险。
+on:
+  schedule:
+    - cron: '30 0 * * *'   # 每天 08:30 北京：日榜前100 + 候选池快照（周一另产周榜，1 号另产月榜）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-rank
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: 抓取榜单数据
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 配置 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 运行抓取脚本（Trending）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/fetch_rank.py
+
+      # 前 100 名：Search API + 快照做差。有 token 时脚本自动把请求间隔降到 2.5s
+      - name: 运行抓取脚本（前 100 名）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/fetch_top100.py
+
+      # 先与远端同步再判断变更：避免 commit 之后才 pull 时因冲突让 job 变红
+      - name: 同步远端最新提交
+        run: git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+
+      - name: 检查数据是否有变更
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain data)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "检测到 data/ 目录发生变更"
+            git --no-pager diff --stat -- data || true
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "data/ 目录无变更，跳过提交"
+          fi
+
+      - name: 提交并推送数据
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "chore(data): update github rank $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

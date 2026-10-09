@@ -1,0 +1,111 @@
+name: pages
+
+# 把静态站点（index.html + assets + data）部署到 GitHub Pages
+#
+# 触发源说明（重要）：
+#   * push：开发者手动 git push 到 main 时部署；
+#   * workflow_run：update-rank 跑完后部署。必须显式声明——GitHub 官方规则是
+#     「由 GITHUB_TOKEN 触发的事件不会再触发新的 workflow run」，
+#     update-rank 用 checkout 注入的 GITHUB_TOKEN 执行 git push，
+#     因此仅靠 `on: push` 永远不会因定时任务而部署，站点数据会永久停在首次快照；
+#   * workflow_dispatch：手动触发。
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ["update-rank"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 打包静态站点
+    runs-on: ubuntu-latest
+    # workflow_run 在完成时触发（成功/失败都会触发），只在成功时才需要重新部署
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      # 只发布站点真正需要的文件：README.md、scripts/、.gitignore 不进产物，
+      # 避免 /README.md、/scripts/fetch_rank.py 被公网直接访问。
+      #
+      # 历史归档（data/daily|weekly|monthly）+ 归档索引（data/archive/index.json）
+      # 现在**必须发布**：前端的历史浏览功能要靠它们。发布的相对路径与仓库里完全一致，
+      # 这样 `python3 -m http.server` 本地跑出来的地址和线上是同一个，
+      # 前端代码不需要区分环境，本地验过的路径线上一定也对。
+      - name: 整理发布产物
+        run: |
+          rm -rf _site
+          mkdir -p _site/data
+          cp index.html _site/
+          cp -r assets _site/
+          cp data/daily.json data/weekly.json data/monthly.json data/meta.json _site/data/
+          # data/pages/<period>/N.json 是前端滚动加载用的分片数据，必须一起发布；
+          # 缺失时前端会退化成整份文件切分（能跑但不是逐片拉取）
+          cp -r data/pages _site/data/
+
+          # ---- 历史归档 ----
+          cp -r data/daily data/weekly data/monthly _site/data/
+          mkdir -p _site/data/archive
+          cp data/archive/index.json _site/data/archive/index.json
+
+          # ---- 仍然排除 ----
+          #   data/snapshots/  每日候选池 star 快照（算增量用，单份数百条，最占体积且无展示价值）
+          #   data/revisions/  同日重跑的留底，属于仓库侧的安全网，前端不读
+          #   data/history/    旧版 fetch_rank.py 的每日整榜快照，已被 data/daily/ 取代
+          rm -rf _site/data/snapshots _site/data/revisions _site/data/history
+
+          # 上面是白名单拷贝，这里再删一次只是双保险，防止以后改成 cp -r data 时误发
+          for banned in snapshots revisions history; do
+            if [ -e "_site/data/$banned" ]; then
+              echo "::error::$banned 不应进入发布产物"; exit 1
+            fi
+          done
+          if [ ! -f _site/data/archive/index.json ]; then
+            echo "::error::归档索引缺失，历史功能会退化为不可用"; exit 1
+          fi
+
+          echo "---- 逐目录体积 ----"
+          du -sh _site/data/* | sort -h || true
+          total=$(du -sm _site | cut -f1)
+          echo "站点总体积: ${total} MB"
+          echo "归档份数: daily=$(ls _site/data/daily | wc -l) weekly=$(ls _site/data/weekly | wc -l) monthly=$(ls _site/data/monthly | wc -l)"
+          # GitHub Pages 单站点上限 1GB。留 100MB 余量提前报错，
+          # 免得某天突然因为超限而发布失败、还得回头猜原因。
+          if [ "$total" -gt 900 ]; then
+            echo "::error::站点体积 ${total}MB 已接近 GitHub Pages 1GB 上限，请考虑归档瘦身策略"
+            exit 1
+          fi
+
+          find _site -type f | sort
+
+      - name: 上传站点产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+  deploy:
+    name: 部署到 GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署
+        id: deployment
+        uses: actions/deploy-pages@v4
