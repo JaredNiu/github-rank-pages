@@ -49,6 +49,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/fetch_top100.py
 
+      # 访问量按天归档：前端把计数写在第三方服务上（那里只有当前值、没有历史），
+      # 这一步把当天/前一天的值读回来落成 data/stats/visits.json，才有「每天多少访问量」。
+      # 只读第三方、只增不减；continue-on-error 是刻意的 —— 第三方挂了绝不能连累抓取。
+      - name: 归档访问统计
+        continue-on-error: true
+        run: python3 scripts/collect_stats.py
+
       # 先与远端同步再判断变更：避免 commit 之后才 pull 时因冲突让 job 变红
       - name: 同步远端最新提交
         run: git pull --rebase --autostash origin "${GITHUB_REF_NAME}"

@@ -210,6 +210,20 @@ body.drawer-open .page { padding-right: calc(var(--drawer-w) + 32px); }
  * 5. 主题开关 / 语言开关（同一档克制语气）
  * ------------------------------------------------------------------------ */
 
+/* 顶部仓库入口：裸图标，与主题开关同一档语气（常态 --muted，hover 转墨色）。
+   它是 <a> 而非 <button>，所以下划线与颜色都要显式声明，否则会继承页脚链接的样式。 */
+.repo-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .15s;
+}
+
+.repo-link:hover { color: var(--text-strong); }
+.repo-link svg { display: block; }
+
 /* 浅色显示月亮（点击进深色），深色显示太阳。两枚图标互斥，永远只露一个。 */
 .theme-btn {
   display: inline-flex;
@@ -848,6 +862,13 @@ html[data-theme="dark"] .lang-dot {
 .site-footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
 .site-footer a:hover { color: var(--text-strong); }
 .footer-sub { margin-top: 4px; }
+
+/* 访问统计两行。数字用等宽数字（tabular-nums）：计数是异步回填的，
+   比例数字会让「1 → 12」这类变化带动整行宽度抖动。 */
+.footer-extra {
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
 
 /* --------------------------------------------------------------------------
  * 11. 详情抽屉

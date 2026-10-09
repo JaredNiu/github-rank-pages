@@ -21,6 +21,8 @@
 | 历史回顾 | Tab 下方一行**快照芯片**，点开即可翻看**昨日 / 上周 / 上月**以及更早的任意一期归档；芯片上直接标出相对时间（`昨日` / `3 天前` / `2 周前`） |
 | 直链分享 | 每一期归档都有独立地址，如 `#daily@2026-10-08`、`#monthly@2026-09`，可直接发给别人或加书签；地址不认识时自动退回最新一期 |
 | 快照标记 | 正在看归档时，右上角更新时间会带上 `快照 ·` 前缀且圆点变灰，和「实时榜单」一眼可分 |
+| 源码入口 | 头部右上角一枚裸图标链到本仓库（`https://github.com/JaredNiu/github-rank-pages`），`target=_blank` + `rel=noopener`，`title`/`aria-label` 随中英切换 |
+| 访问统计 | 页脚一行显示**今日访问量 / 今日各榜期查看次数 / 累计访问量**，下一行列出**最近 7 天**的每日访问量。计数非阻塞、失败静默；详见[第九节](#九访问统计) |
 
 > 不提供关键词搜索框——按设计只保留「榜单选周期 + 标签筛选 + 历史翻看」三种浏览方式。
 
@@ -39,7 +41,8 @@ github-rank-pages/
 │   └── app.js                       # 原生 JS：三榜切换 / 中英切换 / 标签筛选 / 滚动加载
 ├── scripts/
 │   ├── fetch_rank.py                # Trending 页面抓取 + 补全 + 打标签（9~25 条）
-│   └── fetch_top100.py              # Search API + 快照做差 → 前 100 名（主力脚本）
+│   ├── fetch_top100.py              # Search API + 快照做差 → 前 100 名（主力脚本）
+│   └── collect_stats.py             # 访问量按天归档：读第三方计数 → data/stats/visits.json
 ├── data/
 │   ├── daily.json                   # 日榜「最新一份」前 100（供前端读取）
 │   ├── weekly.json                  # 周榜「最新一份」前 100
@@ -53,6 +56,7 @@ github-rank-pages/
 │   ├── snapshots/YYYY-MM-DD.json    # 候选池 star 快照 {fullName: stars}，算增量用；只留最近 40 份
 │   ├── revisions/<period>/*.json    # 同一天重跑时被覆盖掉的旧归档留底（永不清除）
 │   ├── archive/index.json           # 归档索引：各类型有哪些期、条数、统计范围、留底份数（前端直读）
+│   ├── stats/visits.json            # 访问量按天归档（collect_stats.py 写入；前端页脚「最近 7 天」读它）
 │   └── history/YYYY-MM-DD.json      # 旧版每日整榜快照（fetch_rank.py 产出）
 └── .github/workflows/
     ├── update-rank.yml              # 定时任务：抓数 + 补全 + 提交 data/
@@ -200,6 +204,18 @@ python3 scripts/fetch_top100.py --rebuild-archive-index           # 只重建历
 
 >`--rebuild-archive-index` 是纯本地动作（不建 API 客户端、不读 token、不联网），
 >用在"手工补了一份归档 / 删了几期"之后，让前端的历史行重新对齐。详见第五节。
+
+`update-rank` 的步骤顺序（第 5 步是访问统计，见第十节）：
+
+| # | 步骤 | 说明 |
+| --- | --- | --- |
+| 1 | 检出仓库 | `fetch-depth: 0` |
+| 2 | 配置 Python 3.11 | |
+| 3 | `fetch_rank.py` | Trending 页面（9~25 条），带**不退化闸门** |
+| 4 | `fetch_top100.py` | Search API + 快照做差 → 前 100 名 |
+| 5 | `collect_stats.py` | 把当天 / 前一天的访问量读回来归档进 `data/stats/visits.json`；`continue-on-error`，第三方挂了不影响抓取 |
+| 6 | `git pull --rebase` | 先同步再判变更，避免冲突 |
+| 7-8 | 判变更 + 提交推送 | `git add data` 一并带上 `data/stats/` |
 
 手动触发工作流：仓库 → **Actions** → 选择工作流 → **Run workflow**。
 
@@ -751,11 +767,104 @@ GITHUB_TOKEN=ghp_xxx python3 scripts/fetch_rank.py
 
 ---
 
-## 九、数据来源署名
+## 九、访问统计
+
+页脚两行（数字是异步回填的，拿不到就整行不出现）：
+
+```text
+今日访问 42 次 · 日榜 20 / 周榜 13 / 月榜 9 · 累计 318 次
+最近 7 天：10-03 12 · 10-04 31 · 10-05 28 · 10-06 44 · 10-07 51 · 10-08 39 · 10-09 42
+```
+
+### 为什么不是自建后端
+
+站点是纯静态的，自己没有任何可以落库的地方。而 WorkBuddy 云服务那类托管后端
+要求 **Origin 精确匹配**，挂在 `jaredniu.github.io` 上会被直接拒掉——所以只能用
+一个跨域友好的第三方计数服务：
+
+- 服务：`abacus.jasoncameron.dev`（CountAPI 停服后的社区替代品，免注册）
+- 命名空间：`jaredniu-github-rank-pages`
+- 键名规则：`^[A-Za-z0-9_\-.]{3,64}$` —— **不允许斜杠**，分组一律用 `.` 而不是 `/`
+
+选它之前实测过：`countapi.xyz` 域名已不解析、`counterapi.dev` 的 v1 返回 410、
+`hits.sh` 只有总量没有分键。`abacus` 的 `Access-Control-Allow-Origin` 是 `*`，
+preflight 也通过，浏览器可直连。
+
+### 口径
+
+| 键 | 含义 |
+| --- | --- |
+| `all` | 累计页面访问量 |
+| `all.daily` / `all.weekly` / `all.monthly` | 累计「该榜期被查看」的次数 |
+| `d.YYYY-MM-DD` | 当天页面访问量（日期按北京时间 UTC+8 切） |
+| `d.YYYY-MM-DD.daily` / `.weekly` / `.monthly` | 当天「该榜期被查看」的次数 |
+
+**「页面访问」与「榜期查看」是两个量，别混**：一次页面加载记 1 次访问；页内切 Tab
+只累加该榜期，**不再**累加访问量。所以「日榜 + 周榜 + 月榜」之和 ≥ 当天访问量 ——
+这是有意的口径，不是重复计数。
+
+一次页面加载发 **6 个请求**：写 `all`、`all.<当前榜期>`、`d.<今天>`、`d.<今天>.<当前榜期>`
+（4 写），再读另外两个榜期的当天数（2 读——因为一次只能写一个榜期）。
+页内切 Tab 只发 2 个（`all.<新榜期>` + `d.<今天>.<新榜期>`）。
+
+### 三条硬约束（改这块之前先读）
+
+1. **绝不进关键路径**。所有请求都在首屏绘制之后异步发出，带 3 秒超时（`AbortController`）。
+   `Promise.all` 全部落定后**一次性**渲染，避免数字分几次往外蹦。
+   宁可这一行不出现，也不能让统计拖慢页面。
+2. **`null` ≠ `0`**。`get` 一个还不存在的键返回 **404**，它的语义就是 0 次
+   （该榜期今天还没人看过），所以 404 映射成 `0`；而超时 / 网络失败 / 429 映射成 `null`，
+   显示成 `—`。把「拿不到」显示成 0，会在弱网下伪造数据。
+   > 控制台里因此**可能**出现最多 2 条 404 —— 那是「该榜期今天还没人看过」的正常语义，
+   > 不是代码错误。abacus 不支持 `?default=` 缺省值（实测无此参数），也没有批量读接口，绕不开。
+3. **无头浏览器与 DNT 不计数**。`navigator.webdriver` 为真时跳过，否则每跑一次测试就把
+   自己的假流量算进真实数据。要验证计数链路时用 `?stats=force` 显式放行。
+   同时尊重 `navigator.doNotTrack === '1'`——会少统计一部分真实用户，属有意的取舍。
+
+### 实测限额：每 IP 每 10 秒 30 次
+
+响应头里写着 `ratelimit-policy: 30;w=10`，**与命名空间无关**（换个新命名空间一样被限），
+超出返回 `429`。真实用户一次加载只发 6 次、切一次 Tab 才 2 次，正常浏览远够不到；
+但多人共用出口 IP（办公室 / 运营商 NAT）时可能触及 —— 那时页脚会少几个数字或显示 `—`，
+属**优雅降级**而非故障。
+
+> **测试脚本是同一个 IP 猛打，必须自己等限流窗口**：读 `ratelimit-remaining` 响应头，
+> 够宽裕了再做被测动作。否则会把 429 造成的假失败误判成产品缺陷——这一点已经踩过一次
+> （最初把 `Δ=null` 当成"沙箱网络抖动"，实际上是限流）。
+
+### 按天归档：`data/stats/visits.json`
+
+第三方只存「当前值」：没有历史、没有趋势、无法追溯「上周三到底来了多少人」。
+`scripts/collect_stats.py` 在每日 CI 里把当天与前一天的值读回来落成仓库里的 JSON，
+于是「每天有多少访问量」有了可提交、可回溯、与代码一起版本化的记录。
+
+```bash
+python3 scripts/collect_stats.py                     # 正常归档
+python3 scripts/collect_stats.py --dry-run           # 只打印，不落盘
+python3 scripts/collect_stats.py --date 2026-10-09   # 指定「今天」（补跑用）
+```
+
+- **只读**：只发 GET，归档绝不会反过来影响真实计数。
+- **只增不减**：某天的值一旦记下就不再变小（同日重跑取 `max`），既防第三方抖动，
+  也保证历史值不会被后来的重跑改写。
+- **不写 0**：某天所有键都是 0 / 读不到时**跳过**。那通常意味着「那时还没有计数」，
+  写一行 0 等于凭空造一条假记录。
+- **失败退出 0**：统计挂了不能连累抓取流水线（工作流里还配了 `continue-on-error` 双保险）。
+
+前端页脚第二行「最近 7 天」读的就是这份文件；文件缺失或 `days` 为空时那一行不出现。
+`pages.yml` 会把它一起发布，并且**没有它也不让构建失败**。
+
+---
+
+## 十、数据来源署名
 
 - 榜单排序与周期增长量：**[GitHub Trending](https://github.com/trending)**（GitHub 官方页面）
 - 仓库描述、star / fork 总数、语言、topics、创建与推送时间、license、owner 头像：
   **[GitHub REST API](https://docs.github.com/rest/repos/repos)** `GET /repos/{owner}/{repo}`
+- 访问量计数（页脚统计行）：**[abacus](https://jasoncameron.dev/abacus/)** 免注册计数服务，
+  命名空间 `jaredniu-github-rank-pages`。**不使用 Cookie**，不做用户画像；
+  每次访问会向该服务发送一个自增请求（详见[第九节](#九访问统计)）。
+  尊重 `navigator.doNotTrack`，无头浏览器不计数。
 - 灵感参考：[github-daily-rank](https://github.com/OpenGithubs/github-daily-rank)、
   [github-weekly-rank](https://github.com/OpenGithubs/github-weekly-rank)、
   [github-monthly-rank](https://github.com/OpenGithubs/github-monthly-rank)

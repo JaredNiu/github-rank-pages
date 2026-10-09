@@ -63,6 +63,16 @@ jobs:
           mkdir -p _site/data/archive
           cp data/archive/index.json _site/data/archive/index.json
 
+          # ---- 访问量归档 ----
+          # 页脚「最近 7 天」读的就是这一份。文件可能还不存在（collect_stats.py 首次
+          # 跑通之前），缺失时前端会静静不显示那一行，所以这里也不该因此让构建失败。
+          if [ -f data/stats/visits.json ]; then
+            mkdir -p _site/data/stats
+            cp data/stats/visits.json _site/data/stats/visits.json
+          else
+            echo "data/stats/visits.json 尚不存在，跳过（页脚不会显示「最近 7 天」）"
+          fi
+
           # ---- 仍然排除 ----
           #   data/snapshots/  每日候选池 star 快照（算增量用，单份数百条，最占体积且无展示价值）
           #   data/revisions/  同日重跑的留底，属于仓库侧的安全网，前端不读

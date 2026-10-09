@@ -116,7 +116,11 @@
       agoLastWeek: '上周',
       weekAgo: '周前',
       agoLastMonth: '上月',
-      monthAgo: '个月前'
+      monthAgo: '个月前',
+      repoLink: '查看本站源码（GitHub）',
+      statsLine: '今日访问 {today} 次 · {daily} {nd} / {weekly} {nw} / {monthly} {nm} · 累计 {total} 次',
+      statsRecent: '最近 7 天：',
+      statsTitle: '访问量由 abacus 计数服务统计，不使用 Cookie'
     },
     en: {
       htmlLang: 'en',
@@ -193,7 +197,11 @@
       agoLastWeek: 'last week',
       weekAgo: 'w ago',
       agoLastMonth: 'last month',
-      monthAgo: 'mo ago'
+      monthAgo: 'mo ago',
+      repoLink: 'View the source on GitHub',
+      statsLine: '{today} visits today · {daily} {nd} / {weekly} {nw} / {monthly} {nm} · {total} total',
+      statsRecent: 'Last 7 days: ',
+      statsTitle: 'Visit counts by the abacus counter service, no cookies used'
     }
   };
 
@@ -249,6 +257,9 @@
     brandSub: document.getElementById('brandSub'),
     footerSource: document.getElementById('footerSource'),
     footerNote: document.getElementById('footerNote'),
+    footerStats: document.getElementById('footerStats'),
+    footerRecent: document.getElementById('footerRecent'),
+    repoLink: document.getElementById('repoLink'),
     langSwitch: document.getElementById('langSwitch'),
     drawer: document.getElementById('drawer'),
     drawerMask: document.getElementById('drawerMask'),
@@ -281,7 +292,18 @@
     // 每周期最多一个在飞的「补 updatedAt」请求，保证 ensureLiveUpdatedAt 幂等、可重入
     livePromise: { daily: null, weekly: null, monthly: null },
     // 首屏兜底定时器句柄（只起一次）
-    liveFallbackTimer: null
+    liveFallbackTimer: null,
+    // 访问统计：数字全在这里，渲染只读这里。null 的语义是「还没拿到」，
+    // 渲染成 —；与「真的是 0」区分开（键不存在才是 0，见 statsRead）。
+    // booted 保证「一次页面加载只记一次访问」——页内切 tab 走 statsView，不再加访问量。
+    stats: {
+      booted: false,
+      today: null,
+      total: null,
+      dayTab: { daily: null, weekly: null, monthly: null },
+      allTab: { daily: null, weekly: null, monthly: null },
+      recent: null
+    }
   };
 
   /* ------------------------------- 工具函数 ------------------------------- */
@@ -1580,6 +1602,190 @@
     }, 60);
   }
 
+  /* ------------------------------ 访问统计 ------------------------------ *
+   * 站点是纯静态的，自己没有任何可以落库的地方，所以借用一个免注册的计数服务
+   * （abacus.jasoncameron.dev：CORS 为 *，键名只允许 [A-Za-z0-9_-.]，不允许斜杠）。
+   *
+   * 键的设计（都在同一个命名空间下）：
+   *   all                      累计页面访问量
+   *   all.{period}             累计「该榜期被查看」次数
+   *   d.{YYYY-MM-DD}           当天页面访问量
+   *   d.{YYYY-MM-DD}.{period}  当天「该榜期被查看」次数
+   *
+   * 「页面访问」与「榜期查看」是两个量，别把它们当成同一个：一次加载记 1 次访问；
+   * 页内切 tab 只累加该 tab，**不再**累加访问量。所以「日榜 + 周榜 + 月榜」之和会 ≥
+   * 当天访问量 —— 这是有意的口径，不是重复计数。日期按北京时间（UTC+8）切，
+   * 与定时抓取的作息一致。
+   *
+   * 三条硬约束：
+   *   1. 所有请求都在首屏绘制之后异步发出，绝不进入关键路径；失败一律静默 ——
+   *      宁可这一行不出现，也不能让统计拖慢页面、或在控制台刷出错误。
+   *   2. 只在真实浏览器里计数：navigator.webdriver 为真（无头/自动化浏览器）时跳过，
+   *      否则每跑一次测试就把自己的假流量算进真实数据里。
+   *      需要验证计数链路时用 `?stats=force` 显式放行。
+   *   3. 尊重 DNT。这是会少统计一部分真实用户的，属于有意的取舍。
+   * ---------------------------------------------------------------------- */
+
+  var STATS_HOST = 'https://abacus.jasoncameron.dev';
+  var STATS_NS = 'jaredniu-github-rank-pages';
+  var STATS_TIMEOUT_MS = 3000;
+  /* 按天归档的访问量：由 scripts/collect_stats.py 在 CI 里写入本仓库，
+     与上面的第三方计数不是一回事（那份是可追溯的、跟仓库一起版本化的记录）。 */
+  var STATS_RECENT_URL = 'data/stats/visits.json';
+
+  /** 北京时间的日期键，与定时抓取的作息对齐 */
+  function statsDateKey() {
+    var d = new Date(Date.now() + 8 * 3600 * 1000);
+    var m = d.getUTCMonth() + 1;
+    var day = d.getUTCDate();
+    return d.getUTCFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+  }
+
+  /**
+   * 计数服务专用请求：带超时，任何失败都归一成 {ok:false, value:null}，绝不 reject。
+   * 404 单独处理成 {ok:true, value:0} —— 键不存在确实是 0，这与「请求失败」必须分开，
+   * 否则弱网下会把「拿不到」显示成 0。
+   */
+  function statsRequest(path) {
+    function fail() { return { ok: false, value: null }; }
+    if (typeof fetch !== 'function') { return Promise.resolve(fail()); }
+    var init = { cache: 'no-store' };
+    var timer = null;
+    if (typeof AbortController === 'function') {
+      var ctrl = new AbortController();
+      init.signal = ctrl.signal;
+      timer = setTimeout(function () { ctrl.abort(); }, STATS_TIMEOUT_MS);
+    }
+    return fetch(STATS_HOST + path, init).then(function (res) {
+      if (timer) { clearTimeout(timer); }
+      if (res.status === 404) { return { ok: true, value: 0 }; }
+      if (!res.ok) { return fail(); }
+      return res.json().then(function (body) {
+        var n = body && body.value;
+        return { ok: true, value: typeof n === 'number' ? n : null };
+      }, fail);
+    }, function () {
+      if (timer) { clearTimeout(timer); }
+      return fail();
+    });
+  }
+
+  function applyStatsValue(slot, period, value) {
+    if (slot === 'dayTab' || slot === 'allTab') { state.stats[slot][period] = value; }
+    else { state.stats[slot] = value; }
+  }
+
+  /** 写一个计数（+1），把返回值填进对应的槽 */
+  function statsBump(key, slot, period) {
+    return statsRequest('/hit/' + STATS_NS + '/' + key).then(function (r) {
+      applyStatsValue(slot, period, r.ok ? r.value : null);
+    });
+  }
+
+  /** 读一个计数；404 视为 0 */
+  function statsRead(key, slot, period) {
+    return statsRequest('/get/' + STATS_NS + '/' + key).then(function (r) {
+      applyStatsValue(slot, period, r.ok ? r.value : null);
+    });
+  }
+
+  /** 无头浏览器不计数，除非 URL 里显式放行（`?stats=force`，仅供验证链路用） */
+  function statsEnabled() {
+    var forced = /[?&]stats=force(&|=|$)/.test(location.search || '');
+    if (typeof navigator !== 'undefined' && navigator.webdriver && !forced) { return false; }
+    if (typeof navigator !== 'undefined' && navigator.doNotTrack === '1' && !forced) { return false; }
+    return true;
+  }
+
+  /** 读本仓库里按天归档的访问量（静态文件，404 就什么都不显示） */
+  function loadRecentVisits() {
+    if (typeof fetch !== 'function') { return Promise.resolve(); }
+    return fetch(STATS_RECENT_URL, { cache: 'no-store' }).then(function (res) {
+      if (!res.ok) { return null; }
+      return res.json();
+    }).then(function (body) {
+      var days = body && body.days;
+      state.stats.recent = (days && days.length) ? days.slice(-7) : null;
+    }, function () { state.stats.recent = null; });
+  }
+
+  /** 首屏：记一次页面访问，并把「当前榜期 / 当天分榜期」一并记上 */
+  function statsBoot(period) {
+    if (!statsEnabled()) { return; }
+    // 首屏只会经过这里一次；万一路径上又调了一次，退化成「切 tab」而不是又加一次访问
+    if (state.stats.booted) { statsView(period); return; }
+    state.stats.booted = true;
+
+    var day = statsDateKey();
+    var jobs = [
+      statsBump('all', 'total'),
+      statsBump('all.' + period, 'allTab', period),
+      statsBump('d.' + day, 'today'),
+      statsBump('d.' + day + '.' + period, 'dayTab', period)
+    ];
+    // 另外两个榜期的当天数只能读回来：它们各自要被写过才有值，而一次只能写一个
+    for (var i = 0; i < PERIODS.length; i++) {
+      if (PERIODS[i] !== period) {
+        jobs.push(statsRead('d.' + day + '.' + PERIODS[i], 'dayTab', PERIODS[i]));
+      }
+    }
+    jobs.push(loadRecentVisits());
+
+    // 全部落定（含超时兜底）后一次性渲染：数字不要分几次往外蹦
+    Promise.all(jobs).then(renderStats, renderStats);
+  }
+
+  /** 页内切换榜期：只累加该榜期，不重复计页面访问 */
+  function statsView(period) {
+    if (!statsEnabled() || !state.stats.booted) { return; }
+    var day = statsDateKey();
+    Promise.all([
+      statsBump('all.' + period, 'allTab', period),
+      statsBump('d.' + day + '.' + period, 'dayTab', period)
+    ]).then(renderStats, renderStats);
+  }
+
+  /** null 的语义是「还没拿到」，显示成 —，不能显示成 0 */
+  function statsNum(value) {
+    return (typeof value === 'number' && isFinite(value)) ? String(value) : '—';
+  }
+
+  function renderStats() {
+    if (!dom.footerStats) { return; }
+    var s = state.stats;
+    var strings = t();
+
+    // 主行：至少拿到「当天」或「累计」中的一个才出现，否则整行保持隐藏
+    if (s.today === null && s.total === null) {
+      dom.footerStats.textContent = '';
+      dom.footerStats.hidden = true;
+    } else {
+      dom.footerStats.textContent = strings.statsLine
+        .replace('{today}', statsNum(s.today))
+        .replace('{daily}', strings.tabs.daily).replace('{nd}', statsNum(s.dayTab.daily))
+        .replace('{weekly}', strings.tabs.weekly).replace('{nw}', statsNum(s.dayTab.weekly))
+        .replace('{monthly}', strings.tabs.monthly).replace('{nm}', statsNum(s.dayTab.monthly))
+        .replace('{total}', statsNum(s.total));
+      dom.footerStats.title = strings.statsTitle;
+      dom.footerStats.hidden = false;
+    }
+
+    if (!dom.footerRecent) { return; }
+    var recent = s.recent;
+    if (!recent || !recent.length) {
+      dom.footerRecent.textContent = '';
+      dom.footerRecent.hidden = true;
+      return;
+    }
+    var parts = [];
+    for (var i = 0; i < recent.length; i++) {
+      var row = recent[i] || {};
+      parts.push(String(row.date || '').slice(5) + ' ' + statsNum(row.visits));
+    }
+    dom.footerRecent.textContent = strings.statsRecent + parts.join(' · ');
+    dom.footerRecent.hidden = false;
+  }
+
   /** 刷新与语言/状态相关的静态文案 */
   function paintChrome() {
     var strings = t();
@@ -1589,6 +1795,14 @@
     dom.brandSub.textContent = strings.brandSub;
     dom.footerSource.innerHTML = strings.footerSource;
     dom.footerNote.textContent = strings.footerNote;
+
+    // 顶部仓库入口只有一枚图标，文案全靠 title / aria-label，随语言切换
+    if (dom.repoLink) {
+      dom.repoLink.setAttribute('title', strings.repoLink);
+      dom.repoLink.setAttribute('aria-label', strings.repoLink);
+    }
+    // 统计行含榜期名（日榜/周榜/月榜 → Daily/Weekly/Monthly），切语言要跟着重画
+    renderStats();
 
     var tabs = dom.tabs ? dom.tabs.querySelectorAll('.tab') : [];
     for (var i = 0; i < tabs.length; i++) {
@@ -1679,6 +1893,10 @@
     paintChrome();
     renderTagBar();
     renderHistoryBar();
+
+    // 访问统计：首屏这一次记「页面访问 + 当前榜期」，页内切榜只记榜期（见 statsBoot / statsView）。
+    // 放在所有渲染之后：统计是纯粹的旁路，任何时候都不该抢在首屏绘制前面。
+    if (isBoot) { statsBoot(period); } else { statsView(period); }
 
     var feed = feedOf(period);
     // 切榜必须把列表整个重绘：board 是三个榜共用的同一个 DOM 节点。
