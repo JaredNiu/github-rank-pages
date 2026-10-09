@@ -105,10 +105,10 @@ SNAPSHOT_KEEP: int = 40
 #: 窗口语义（重要，见 compute_window）：
 #:   * daily   —— 滚动最近 24 小时（截至运行时刻），对应「近 24 小时新增」
 #:               （刻意不写「今日」：它是滚动窗口，不是自然日，写成"今日"会被误读）
-#:   * weekly  —— 最近 7 个**完整自然日**（周一 08:30 运行时即「上周一 ~ 周日」），对应「上周新增」
+#:   * weekly  —— 最近 7 个**完整自然日**（周一 08:00 运行时即「上周一 ~ 周日」），对应「上周新增」
 #:   * monthly —— **上一个完整自然月**（每月 1 号运行时即「上月」），对应「上月新增」
 #:
-#: 窗口一律用**时刻级** ISO8601（``created:2026-10-07T00:30:00Z..2026-10-08T00:30:00Z``）。
+#: 窗口一律用**时刻级** ISO8601（``created:2026-10-07T00:00:00Z..2026-10-08T00:00:00Z``）。
 #: 用纯日期区间（``2026-10-07..2026-10-08``）会被 GitHub 按整天包含成 48 小时；
 #: 写成两个限定词（``created:>=X created:<=Y``）则会被静默忽略、返回全库。详见 make_query。
 PERIOD_CONFIG: Dict[str, Dict[str, Any]] = {
@@ -280,8 +280,8 @@ def resolve_as_of(raw: Optional[str]) -> datetime:
         except ValueError:
             fr.log("--date 格式非法({0}), 回退为当前时刻".format(raw), "WARN")
         else:
-            # 用该日 00:30 UTC（= 北京 08:30，正是 cron 的实际触发时刻）作为瞬时点
-            return datetime(parsed.year, parsed.month, parsed.day, 0, 30, 0, tzinfo=timezone.utc)
+            # 用该日 00:00 UTC（= 北京 08:00，正是 cron 的实际触发时刻）作为瞬时点
+            return datetime(parsed.year, parsed.month, parsed.day, 0, 0, 0, tzinfo=timezone.utc)
     return datetime.now(timezone.utc)
 
 
@@ -314,7 +314,7 @@ def compute_window(period: str, as_of: datetime) -> Dict[str, Any]:
                                  23, 59, 59, tzinfo=utc)
         name_date: date = first_day_prev
     elif period == "weekly":
-        # 最近 7 个完整自然日：周一 00:30 UTC 跑 -> 上周一 00:00 ~ 周日 23:59:59
+        # 最近 7 个完整自然日：周一 00:00 UTC 跑 -> 上周一 00:00 ~ 周日 23:59:59
         today_midnight: datetime = datetime(as_of.year, as_of.month, as_of.day, tzinfo=utc)
         end = today_midnight - timedelta(seconds=1)
         start = today_midnight - timedelta(days=int(PERIOD_CONFIG[period]["days"]))
@@ -339,7 +339,7 @@ def resolve_periods(raw: Optional[str], as_of: datetime) -> List[str]:
     """决定本次要产出哪些榜.
 
     未显式指定时按运行日期自动判断: 日榜每天都产; 周榜只在周一; 月榜只在 1 号。
-    (cron 为 UTC: ``30 0 * * 1`` = 北京周一 08:30, ``30 0 1 * *`` = 北京 1 号 08:30。)
+    (cron 为 UTC: ``0 0 * * 1`` = 北京周一 08:00, ``0 0 1 * *`` = 北京 1 号 08:00。)
 
     Args:
         raw: 逗号分隔的周期列表, 可为空.
@@ -354,7 +354,7 @@ def resolve_periods(raw: Optional[str], as_of: datetime) -> List[str]:
             return periods
         fr.log("--periods 没有合法值({0}), 回退为自动判断".format(raw), "WARN")
 
-    # 用北京时间判断"今天是周几 / 几号", 与 cron(UTC 00:30 = 北京 08:30)对齐
+    # 用北京时间判断"今天是周几 / 几号", 与 cron(UTC 00:00 = 北京 08:00)对齐
     beijing: datetime = as_of.astimezone(TZ_BEIJING)
     auto: List[str] = ["daily"]
     if beijing.weekday() == 0:

@@ -1,7 +1,7 @@
 name: update-rank
 
 # 定时抓取榜单数据，并把结果提交回仓库 data/ 目录
-# cron 使用 UTC 时间：00:30 UTC == 北京时间 08:30
+# cron 使用 UTC 时间：00:00 UTC == 北京时间 08:00（UTC+8）
 #
 # 两个脚本分工：
 #   * fetch_rank.py   —— 抓 GitHub Trending 页面（9~25 条），保持原有产物不退化；
@@ -12,7 +12,7 @@ name: update-rank
 # 起两次 run、白耗 Search API 配额，还会多一次空提交风险。
 on:
   schedule:
-    - cron: '30 0 * * *'   # 每天 08:30 北京：日榜前100 + 候选池快照（周一另产周榜，1 号另产月榜）
+    - cron: '0 0 * * *'   # 每天 08:00 北京：日榜前100 + 候选池快照（周一另产周榜，1 号另产月榜）
   workflow_dispatch:
 
 permissions:

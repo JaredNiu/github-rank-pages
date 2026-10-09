@@ -64,7 +64,7 @@
       fileHint: '检测到你正通过 file:// 直接打开页面，浏览器会拦截本地 JSON 读取。请在项目根目录执行 python3 -m http.server 8000 后访问 http://localhost:8000。',
       filterEmpty: '该标签下暂无项目',
       footerSource: '数据来源：<a href="https://github.com/trending" target="_blank" rel="noopener noreferrer">GitHub Trending</a> ＋ <a href="https://docs.github.com/rest" target="_blank" rel="noopener noreferrer">GitHub REST API</a> 补全元信息',
-      footerNote: '由 GitHub Actions 定时抓取并自动部署到 GitHub Pages · 每日北京时间 08:30 更新',
+      footerNote: '由 GitHub Actions 定时抓取并自动部署到 GitHub Pages · 每日北京时间 08:00 更新',
       detail: '详情',
       close: '关闭',
       secDesc: '完整描述',
@@ -141,7 +141,7 @@
       fileHint: 'You opened this page via file://, so the browser blocks local JSON reads. Run python3 -m http.server 8000 in the project root and visit http://localhost:8000.',
       filterEmpty: 'No repos under this tag',
       footerSource: 'Source: <a href="https://github.com/trending" target="_blank" rel="noopener noreferrer">GitHub Trending</a> enriched by the <a href="https://docs.github.com/rest" target="_blank" rel="noopener noreferrer">GitHub REST API</a>',
-      footerNote: 'Fetched by GitHub Actions and deployed to GitHub Pages · Updated daily at 08:30 (UTC+8)',
+      footerNote: 'Fetched by GitHub Actions and deployed to GitHub Pages · Updated daily at 08:00 (UTC+8)',
       detail: 'Details',
       close: 'Close',
       secDesc: 'Description',
@@ -869,7 +869,7 @@
    *
    * 曾经按北京时间 +8h 换算，结果 10-07T23:59:59Z 落到 10-08，周榜被显示成
    * 「10-01 → 10-08」—— 把今天也圈了进去，与「上周」自相矛盾。
-   * 日榜窗口锚在北京运行时刻（08:30 = 00:30Z），两种算法同一天，所以掩盖了这个问题。
+   * 日榜窗口锚在北京运行时刻（08:00 = 00:00Z），两种算法同一天，所以掩盖了这个问题。
    *
    * @param {string} iso ISO8601 时刻
    * @returns {string} YYYY-MM-DD；解析不出来时返回空串
