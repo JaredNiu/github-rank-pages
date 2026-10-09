@@ -90,16 +90,24 @@ def collect_day(day: str):
     return {k: v for k, v in fresh.items() if v is not None}
 
 
-def merge_day(entry: dict, fresh: dict) -> dict:
-    """只增不减地合并某一天：已记下的历史值永远不会被后来的小值改写"""
-    entry = dict(entry)
+def merge_day(day: str, entry: dict, fresh: dict) -> dict:
+    """只增不减地合并某一天：已记下的历史值永远不会被后来的小值改写。
+
+    `date` 必须由这里显式写回：fresh 里只有计数字段，entry 也可能来自一份
+    **缺 date 的旧文件**，任何一边都不带日期 —— 漏掉它，前端就拿到一条没有日期的记录
+    （页脚会渲染成「最近 7 天： 25」）。这个坑真的踩过一次。
+    """
+    out = {"date": day}
     for field in FIELDS:
+        old = entry.get(field)
         value = fresh.get(field)
         if value is None:
+            # 这次没读到：保留上一次的值，绝不写 None，也绝不写 0
+            if isinstance(old, int):
+                out[field] = old
             continue
-        old = entry.get(field)
-        entry[field] = value if not isinstance(old, int) else max(old, value)
-    return entry
+        out[field] = value if not isinstance(old, int) else max(old, value)
+    return out
 
 
 def load_existing() -> dict:
@@ -114,7 +122,19 @@ def load_existing() -> dict:
     days = body.get("days") if isinstance(body, dict) else None
     if not isinstance(days, list):
         return {}
-    return {d["date"]: d for d in days if isinstance(d, dict) and isinstance(d.get("date"), str)}
+    out = {}
+    for d in days:
+        if not isinstance(d, dict):
+            continue
+        day = d.get("date")
+        if not isinstance(day, str):
+            # 没有日期的记录**无法归属到任何一天**，留下来只会在前端渲染成
+            # 「最近 7 天： 25」这种没有日期的行。只能丢弃 —— 但必须出声，
+            # 否则「一条记录悄悄消失」和「本来就没有这条记录」看起来一模一样。
+            print(f"  WARN  丢弃一条缺 date 的旧记录（{sorted(d.keys())}）", file=sys.stderr)
+            continue
+        out[day] = d
+    return out
 
 
 def main() -> int:
@@ -146,7 +166,7 @@ def main() -> int:
             print(f"  [{day}] 没有计数（键不存在或全为 0），跳过 —— 不写 0")
             continue
         before = merged.get(day, {})
-        after = merge_day(before, fresh)
+        after = merge_day(day, before, fresh)
         changed = after != before
         merged[day] = after
         wrote_any = wrote_any or changed

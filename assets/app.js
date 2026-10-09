@@ -1711,7 +1711,12 @@
 
   /** 首屏：记一次页面访问，并把「当前榜期 / 当天分榜期」一并记上 */
   function statsBoot(period) {
-    if (!statsEnabled()) { return; }
+    // 「最近 7 天」读的是本仓库自己的静态文件，跟「要不要计数」是两件事：
+    // 即使因为无头浏览器 / DNT 不计数，这行历史也该照常显示。所以先单独把它挂上，
+    // 不要放在 statsEnabled() 的早退之后 —— 那会让「只是不想被统计」的用户连历史都看不到。
+    var recent = loadRecentVisits();
+
+    if (!statsEnabled()) { recent.then(renderStats, renderStats); return; }
     // 首屏只会经过这里一次；万一路径上又调了一次，退化成「切 tab」而不是又加一次访问
     if (state.stats.booted) { statsView(period); return; }
     state.stats.booted = true;
@@ -1729,7 +1734,7 @@
         jobs.push(statsRead('d.' + day + '.' + PERIODS[i], 'dayTab', PERIODS[i]));
       }
     }
-    jobs.push(loadRecentVisits());
+    jobs.push(recent);
 
     // 全部落定（含超时兜底）后一次性渲染：数字不要分几次往外蹦
     Promise.all(jobs).then(renderStats, renderStats);
@@ -1780,7 +1785,10 @@
     var parts = [];
     for (var i = 0; i < recent.length; i++) {
       var row = recent[i] || {};
-      parts.push(String(row.date || '').slice(5) + ' ' + statsNum(row.visits));
+      // 日期缺失时只显示数字，**不要**留下一个悬空的前导空格（会渲染成「最近 7 天： 25」）。
+      // 归档脚本已保证每条都带 date，这里只是不让渲染取决于上游一定不出错。
+      var stamp = String(row.date || '').slice(5);
+      parts.push(stamp ? (stamp + ' ' + statsNum(row.visits)) : statsNum(row.visits));
     }
     dom.footerRecent.textContent = strings.statsRecent + parts.join(' · ');
     dom.footerRecent.hidden = false;
