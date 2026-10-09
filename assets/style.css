@@ -130,13 +130,11 @@ body.drawer-open { overflow: hidden; }
   max-width: var(--page-max);
   margin: 0 auto;
   padding: 0 var(--page-pad);
-  transition: padding-right .18s ease;
 }
 
-/* 抽屉贴着右侧浮层，宽屏下把版心右内边距撑开给它让位，正文不会被盖住。
-   < 1120px 时改回普通内边距，抽屉当作蒙层使用。 */
-body.drawer-open .page { padding-right: calc(var(--drawer-w) + 32px); }
-
+/* 抽屉是 position: fixed; right: 0 的纯覆盖浮层，天然浮在正文之上，
+   不需要版心给它让位，因此不再为 .page 设置任何 padding-right 变化。
+   body.drawer-open（见上文）仅用于锁滚动。 */
 .main { display: block; }
 
 /* --------------------------------------------------------------------------
@@ -1170,11 +1168,6 @@ html[data-theme="dark"] .lang-dot {
 /* --------------------------------------------------------------------------
  * 12. 响应式
  * ------------------------------------------------------------------------ */
-
-/* 不够宽就不要再给抽屉让位，直接当蒙层用 */
-@media (max-width: 1119px) {
-  body.drawer-open .page { padding-right: var(--page-pad); }
-}
 
 @media (max-width: 820px) {
   :root { --page-pad: 26px; }

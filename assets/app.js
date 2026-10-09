@@ -1439,14 +1439,19 @@
     dom.drawer.hidden = false;
     dom.drawerMask.hidden = false;
 
-    // 锁滚动前量一次"滚动条消失会让可视宽度宽出多少"，再补上等宽的 padding-right，
-    // 否则整页内容会横移一截（现象就是"展开详情时内容抖一下"）。
-    // 注意：必须"加类前后各量一次"，而不是"加类前算 innerWidth - clientWidth"。
-    // 若 html 启用了 scrollbar-gutter: stable，锁滚动前后 clientWidth 根本不变，
-    // 按旧算法会误补 15px，反而把内容推歪。
-    var widthBefore = document.documentElement.clientWidth;
+    // 锁滚动时补偿"滚动条消失会让内容横移"的量。
+    // 关键：要测量"被加 padding 的那个元素"——也就是 <body>——自身的宽度增量，
+    // 而不是 <html>。本项目在 html 上设了 `scrollbar-gutter: stable`，锁滚动
+    // （body 设 overflow:hidden，向上传播到视口）会让 html 的 clientWidth 因 gutter
+    // 释放而变大（实测 1425→1440，+15），但 body 自身宽度并不变（仍 1425）。若按旧
+    // 算法拿 html 的 +15 去给 body 补 padding，body 内容区反被压窄 15px、居中内容
+    // 左移 7.5px，正是"打开抽屉内容抖一下"的残余来源。
+    // 改成测 body：本场景下 widened=0 → 不补偿，正文纹丝不动；只有在 body 自己确实
+    // 因锁滚动失去滚动条（非 stable 场景）时，body.clientWidth 才会变大，此时才补
+    // 上等宽 padding。仍坚持"加类前后各量一次"。
+    var widthBefore = document.body.clientWidth;
     document.body.classList.add('drawer-open');
-    var widened = document.documentElement.clientWidth - widthBefore;
+    var widened = document.body.clientWidth - widthBefore;
     if (widened > 0) {
       document.body.style.paddingRight = widened + 'px';
     }
