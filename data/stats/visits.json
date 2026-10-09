@@ -1,7 +1,14 @@
 {
-  "generatedAt": null,
+  "generatedAt": "2026-10-09T08:26:51Z",
   "provider": "abacus.jasoncameron.dev",
   "namespace": "jaredniu-github-rank-pages",
-  "note": "visits 是当天页面访问量；daily/weekly/monthly 是各榜期被查看的次数（含首屏与页内切榜，故三者之和 ≥ visits）。日期按北京时间（UTC+8）切。由 scripts/collect_stats.py 在每日 CI 里写入。",
-  "days": []
+  "note": "visits 是当天页面访问量；daily/weekly/monthly 是各榜期被查看的次数（含首屏与页内切榜，故三者之和 ≥ visits）。日期按北京时间（UTC+8）切。",
+  "days": [
+    {
+      "visits": 25,
+      "daily": 25,
+      "weekly": 2,
+      "monthly": 1
+    }
+  ]
 }

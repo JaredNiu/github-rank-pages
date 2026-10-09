@@ -1,13 +1,13 @@
 {
   "period": "daily",
   "periodLabel": "近 24 小时飙升榜",
-  "updatedAt": "2026-10-09T15:49:13+08:00",
+  "updatedAt": "2026-10-09T16:26:31+08:00",
   "pageSize": 6,
   "totalPages": 17,
   "total": 100,
   "tagCounts": {
-    "ai": 38,
-    "agent": 35,
+    "ai": 39,
+    "agent": 36,
     "llm": 19,
     "devtool": 15,
     "media": 12,
