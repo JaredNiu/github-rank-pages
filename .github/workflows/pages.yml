@@ -52,6 +52,7 @@ jobs:
           rm -rf _site
           mkdir -p _site/data
           cp index.html _site/
+          cp stats.html _site/
           cp -r assets _site/
           cp data/daily.json data/weekly.json data/monthly.json data/meta.json _site/data/
           # data/pages/<period>/N.json 是前端滚动加载用的分片数据，必须一起发布；

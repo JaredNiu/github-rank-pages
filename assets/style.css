@@ -1228,3 +1228,87 @@ html[data-theme="dark"] .lang-dot {
   .drawer-cta:hover,
   .detail-btn { transition: none; }
 }
+
+/* --------------------------------------------------------------------------
+ * 14. 访问统计独立页（stats.html）
+ * ------------------------------------------------------------------------ */
+
+.stats-wrap { padding: 8px 0 40px; }
+
+.stats-h {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 36px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.stats-card {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  padding: 16px 18px;
+}
+
+.stats-card .k { font-size: 13px; color: var(--muted); }
+
+.stats-card .v {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 14px 0 0;
+}
+
+.stats-table-wrap { overflow-x: auto; }
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.stats-table th,
+.stats-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table th { font-weight: 600; color: var(--muted); white-space: nowrap; }
+
+.stats-table td.num,
+.stats-table th.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.stats-table tbody tr:hover td { background: var(--surface); }
+
+/* 主页面头部「统计」入口：与语言切换同族的小字链接 */
+.nav-stats {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .15s;
+}
+.nav-stats:hover { color: var(--text-strong); }
+
+.stats-back { color: var(--muted); text-decoration: none; }
+.stats-back:hover { color: var(--text-strong); }
