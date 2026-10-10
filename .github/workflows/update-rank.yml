@@ -12,8 +12,7 @@ name: update-rank
 # 起两次 run、白耗 Search API 配额，还会多一次空提交风险。
 on:
   schedule:
-    - cron: '0 0 * * *'     # 每天 08:00 北京：日榜前100 + 候选池快照（周一另产周榜，1 号另产月榜）
-    - cron: '20 5 * * *'    # 临时测试：北京时间 2026-10-10 13:20（UTC 05:20），验证改名重注册后 schedule 是否恢复
+    - cron: '0 0 * * *'   # 每天 08:00 北京：日榜前100 + 候选池快照（周一另产周榜，1 号另产月榜）
   workflow_dispatch:
 
 permissions:
