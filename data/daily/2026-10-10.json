@@ -1,9 +1,14 @@
 {
   "period": "daily",
   "periodLabel": "近 24 小时飙升榜",
-  "updatedAt": "2026-10-10T14:42:46+08:00",
-  "source": "GitHub Search API (created range + snapshot diff)",
+  "date": "2026-10-10",
+  "rangeStart": "2026-10-09T06:42:46Z",
+  "rangeEnd": "2026-10-10T06:42:46Z",
+  "generatedAt": "2026-10-10T14:42:46+08:00",
+  "baselineDate": "2026-10-09",
   "count": 100,
+  "source": "GitHub Search API (created range + snapshot diff)",
+  "updatedAt": "2026-10-10T14:42:46+08:00",
   "tagCounts": {
     "ai": 29,
     "agent": 26,
@@ -19,6 +24,10 @@
     "game": 3,
     "database": 2,
     "security": 1
+  },
+  "growthStats": {
+    "snapshot": 65,
+    "new": 35
   },
   "items": [
     {
@@ -4263,13 +4272,5 @@
         "mobile"
       ]
     }
-  ],
-  "date": "2026-10-10",
-  "rangeStart": "2026-10-09T06:42:46Z",
-  "rangeEnd": "2026-10-10T06:42:46Z",
-  "baselineDate": "2026-10-09",
-  "growthStats": {
-    "snapshot": 65,
-    "new": 35
-  }
+  ]
 }
