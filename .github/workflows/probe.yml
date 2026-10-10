@@ -1,0 +1,15 @@
+name: schedule-probe
+
+# 临时探针：只用来判断 GitHub 的 schedule 事件在这个仓库/账号上到底能不能触发。
+# 结构刻意做到最简（无 concurrency、无 permissions、无 checkout），
+# 只 echo 一行。验证完立刻删除。
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "schedule probe fired at $(date -u)"
