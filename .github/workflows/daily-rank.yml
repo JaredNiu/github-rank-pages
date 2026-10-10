@@ -13,7 +13,7 @@ name: update-rank
 on:
   schedule:
     - cron: '0 0 * * *'     # 每天 08:00 北京：日榜前100 + 候选池快照（周一另产周榜，1 号另产月榜）
-    - cron: '15 4 * * *'    # 临时测试：北京时间 2026-10-10 12:15（UTC 04:15），留足登记时间，验证 schedule 是否恢复
+    - cron: '20 5 * * *'    # 临时测试：北京时间 2026-10-10 13:20（UTC 05:20），验证改名重注册后 schedule 是否恢复
   workflow_dispatch:
 
 permissions:
