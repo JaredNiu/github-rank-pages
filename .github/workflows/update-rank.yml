@@ -26,6 +26,9 @@ jobs:
   update:
     name: 抓取榜单数据
     runs-on: ubuntu-latest
+    # 防止某次运行卡死（如 git pull 挂住）后，因 concurrency.cancel-in-progress=false
+    # 把后续定时/手动 run 永远堵在队列里。30 分钟远超正常抓取耗时，只是兜底上限。
+    timeout-minutes: 30
 
     steps:
       - name: 检出仓库
