@@ -53,6 +53,8 @@ jobs:
           mkdir -p _site/data
           cp index.html _site/
           cp stats.html _site/
+          # 手动触发页：需要用户自己的令牌才会发请求，页面本身已加 noindex
+          cp trigger.html _site/
           cp -r assets _site/
           cp data/daily.json data/weekly.json data/monthly.json data/meta.json _site/data/
           # data/pages/<period>/N.json 是前端滚动加载用的分片数据，必须一起发布；
