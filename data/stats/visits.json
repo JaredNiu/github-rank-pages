@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-22T09:42:16Z",
+  "generatedAt": "2026-10-23T02:59:15Z",
   "provider": "abacus.jasoncameron.dev",
   "namespace": "jaredniu-github-rank-pages",
   "note": "visits 是当天页面访问量；daily/weekly/monthly 是各榜期被查看的次数（含首屏与页内切榜，故三者之和 ≥ visits）。日期按北京时间（UTC+8）切。",
@@ -97,10 +97,17 @@
     },
     {
       "date": "2026-10-22",
-      "visits": 3,
-      "daily": 8,
+      "visits": 7,
+      "daily": 13,
       "weekly": 2,
       "monthly": 2
+    },
+    {
+      "date": "2026-10-23",
+      "visits": 3,
+      "daily": 3,
+      "weekly": 0,
+      "monthly": 1
     }
   ]
 }
