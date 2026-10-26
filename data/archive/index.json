@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T10:37:04+08:00",
+  "generatedAt": "2026-10-26T12:11:30+08:00",
   "types": {
     "daily": {
       "periodLabel": "近 24 小时飙升榜",
@@ -13,10 +13,10 @@
           "file": "data/daily/2026-10-26.json",
           "date": "2026-10-26",
           "count": 100,
-          "rangeStart": "2026-10-25T02:37:04Z",
-          "rangeEnd": "2026-10-26T02:37:04Z",
-          "updatedAt": "2026-10-26T10:37:04+08:00",
-          "revisions": 0
+          "rangeStart": "2026-10-25T04:11:30Z",
+          "rangeEnd": "2026-10-26T04:11:30Z",
+          "updatedAt": "2026-10-26T12:11:30+08:00",
+          "revisions": 1
         },
         {
           "name": "2026-10-25",
@@ -214,8 +214,8 @@
           "count": 100,
           "rangeStart": "2026-10-19T00:00:00Z",
           "rangeEnd": "2026-10-25T23:59:59Z",
-          "updatedAt": "2026-10-26T10:37:04+08:00",
-          "revisions": 0
+          "updatedAt": "2026-10-26T12:11:30+08:00",
+          "revisions": 1
         },
         {
           "name": "2026-10-19",
