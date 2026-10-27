@@ -1,24 +1,24 @@
 {
   "period": "daily",
   "periodLabel": "近 24 小时飙升榜",
-  "updatedAt": "2026-10-27T12:30:57+08:00",
+  "updatedAt": "2026-10-27T16:57:08+08:00",
   "pageSize": 6,
   "totalPages": 17,
   "total": 100,
   "tagCounts": {
     "ai": 48,
-    "agent": 39,
-    "llm": 21,
+    "agent": 42,
+    "llm": 24,
     "devtool": 15,
-    "media": 15,
-    "mobile": 11,
+    "media": 14,
     "web": 11,
+    "mobile": 9,
     "cli": 7,
-    "data": 6,
-    "devops": 4,
-    "game": 3,
-    "security": 3,
-    "docs": 2,
-    "database": 1
+    "data": 5,
+    "devops": 5,
+    "security": 4,
+    "game": 2,
+    "database": 1,
+    "docs": 1
   }
 }
