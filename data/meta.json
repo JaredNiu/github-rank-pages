@@ -4,7 +4,7 @@
     "weekly": 100,
     "monthly": 24
   },
-  "updatedAt": "2026-10-28T13:01:58+08:00",
+  "updatedAt": "2026-10-28T17:04:34+08:00",
   "generator": "fetch_top100.py",
   "source": "https://github.com/trending",
   "periods": [
@@ -17,14 +17,14 @@
   ],
   "tagCounts": {
     "daily": {
-      "ai": 47,
+      "ai": 48,
       "agent": 45,
-      "llm": 20,
-      "media": 15,
-      "devtool": 13,
-      "web": 12,
+      "llm": 21,
+      "devtool": 14,
+      "media": 14,
+      "web": 13,
       "cli": 8,
-      "mobile": 8,
+      "mobile": 7,
       "devops": 5,
       "data": 4,
       "security": 4,
