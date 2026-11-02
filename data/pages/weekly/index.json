@@ -1,7 +1,7 @@
 {
   "period": "weekly",
   "periodLabel": "上周飙升榜",
-  "updatedAt": "2026-11-02T10:20:38+08:00",
+  "updatedAt": "2026-11-02T13:26:30+08:00",
   "pageSize": 6,
   "totalPages": 17,
   "total": 100,
@@ -15,7 +15,7 @@
     "cli": 8,
     "data": 6,
     "devops": 6,
-    "mobile": 6,
+    "mobile": 5,
     "security": 4,
     "game": 2,
     "database": 1,
