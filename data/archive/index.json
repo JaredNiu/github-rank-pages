@@ -1,13 +1,23 @@
 {
-  "generatedAt": "2026-11-01T13:27:54+08:00",
+  "generatedAt": "2026-11-02T10:20:38+08:00",
   "types": {
     "daily": {
       "periodLabel": "近 24 小时飙升榜",
       "dir": "data/daily",
-      "count": 25,
-      "latest": "2026-11-01",
+      "count": 26,
+      "latest": "2026-11-02",
       "oldest": "2026-10-08",
       "files": [
+        {
+          "name": "2026-11-02",
+          "file": "data/daily/2026-11-02.json",
+          "date": "2026-11-02",
+          "count": 100,
+          "rangeStart": "2026-11-01T02:20:38Z",
+          "rangeEnd": "2026-11-02T02:20:38Z",
+          "updatedAt": "2026-11-02T10:20:38+08:00",
+          "revisions": 0
+        },
         {
           "name": "2026-11-01",
           "file": "data/daily/2026-11-01.json",
@@ -263,10 +273,20 @@
     "weekly": {
       "periodLabel": "上周飙升榜",
       "dir": "data/weekly",
-      "count": 4,
-      "latest": "2026-10-26",
+      "count": 5,
+      "latest": "2026-11-02",
       "oldest": "2026-10-08",
       "files": [
+        {
+          "name": "2026-11-02",
+          "file": "data/weekly/2026-11-02.json",
+          "date": "2026-11-02",
+          "count": 100,
+          "rangeStart": "2026-10-26T00:00:00Z",
+          "rangeEnd": "2026-11-01T23:59:59Z",
+          "updatedAt": "2026-11-02T10:20:38+08:00",
+          "revisions": 0
+        },
         {
           "name": "2026-10-26",
           "file": "data/weekly/2026-10-26.json",
@@ -341,8 +361,8 @@
   },
   "snapshots": {
     "dir": "data/snapshots",
-    "count": 25,
-    "latest": "2026-11-01",
+    "count": 26,
+    "latest": "2026-11-02",
     "keep": 40,
     "files": [
       "2026-10-08",
@@ -369,7 +389,8 @@
       "2026-10-29",
       "2026-10-30",
       "2026-10-31",
-      "2026-11-01"
+      "2026-11-01",
+      "2026-11-02"
     ]
   }
 }
